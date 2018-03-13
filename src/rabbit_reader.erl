@@ -547,9 +547,14 @@ handle_other({channel_closing, ChPid}, State) ->
     ok = rabbit_channel:ready_for_close(ChPid),
     {_, State1} = channel_cleanup(ChPid, State),
     maybe_close(control_throttle(State1));
+handle_other({'EXIT', Parent, normal}, State = #v1{parent = Parent}) ->
+    terminate("normal connection closure", State),
+    maybe_emit_stats(State),
+    exit(normal);
 handle_other({'EXIT', Parent, Reason}, State = #v1{parent = Parent}) ->
-    terminate(io_lib:format("broker forced connection closure "
-                            "with reason '~w'", [Reason]), State),
+    Msg = io_lib:format("broker forced connection closure with reason '~w'",
+                        [Reason]),
+    terminate(Msg, State),
     %% this is what we are expected to do according to
     %% http://www.erlang.org/doc/man/sys.html
     %%
